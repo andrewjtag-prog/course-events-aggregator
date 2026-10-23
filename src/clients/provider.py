@@ -36,11 +36,16 @@ class EventsProviderClient:
 
     async def get_available_seats(self, event_id: str) -> List[str]:
         """Получает список свободных мест для события."""
-        # Важно: в задании указано, что URL должен заканчиваться на слэш /
-        response = await self.client.get(f"/api/events/{event_id}/seats/")
-        response.raise_for_status()
-        data = response.json()
-        return data.get("seats", [])
+        try:
+            response = await self.client.get(f"/api/events/{event_id}/seats/")
+            response.raise_for_status()
+            data = response.json()
+            return data.get("seats", [])
+        except httpx.HTTPStatusError as e:
+            # Если внешнее API вернуло 500 (например, событие не опубликовано там)
+            if e.response.status_code == 500:
+                raise Exception("Внешнее API вернуло ошибку. Возможно, событие не опубликовано или мест нет.")
+            raise e
 
     async def register_ticket(self, event_id: str, data: dict) -> str:
         """Регистрирует пользователя и возвращает ticket_id."""

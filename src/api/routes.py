@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -9,6 +10,8 @@ from src.repositories.event import EventRepository
 from src.clients.provider import EventsProviderClient
 from src.services.sync import SyncService
 from src.schemas.event import PaginatedEventsSchema, EventDetailSchema
+from src.services.ticket import TicketService
+from src.schemas.ticket import TicketCreateSchema, TicketResponseSchema, SeatsResponseSchema
 
 router = APIRouter()
 
@@ -41,14 +44,16 @@ async def get_events(
     page_size: int = Query(20, ge=1, le=100, description="Размер страницы"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Получает список событий из локальной БД с фильтрацией и пагинацией.
-    """
     query = select(Event)
     
-    # Фильтрация по дате (если передана)
     if date_from:
-        query = query.where(Event.event_time >= date_from)
+        try:
+            # Преобразуем строку в datetime и добавляем таймзону UTC
+            parsed_date = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            query = query.where(Event.event_time >= parsed_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    # ... дальше идет подсчет count и пагинация ...
 
     # Считаем общее количество для пагинации
     count_query = select(func.count()).select_from(query.subquery())
@@ -85,3 +90,36 @@ async def get_event_detail(event_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Event not found")
         
     return event
+
+@router.get("/events/{event_id}/seats", response_model=SeatsResponseSchema, tags=["Events"])
+async def get_seats(event_id: str, db: AsyncSession = Depends(get_db)):
+    """Получить свободные места (кэш 30 сек)"""
+    client = EventsProviderClient()
+    try:
+        service = TicketService(db, client)
+        seats = await service.get_available_seats(event_id)
+        return {"event_id": event_id, "available_seats": seats}
+    finally:
+        await client.close()
+
+@router.post("/tickets", response_model=TicketResponseSchema, status_code=201, tags=["Tickets"])
+async def create_ticket(data: TicketCreateSchema, db: AsyncSession = Depends(get_db)):
+    """Регистрация на событие"""
+    client = EventsProviderClient()
+    try:
+        service = TicketService(db, client)
+        ticket_id = await service.register_ticket(data)
+        return {"ticket_id": ticket_id}
+    finally:
+        await client.close()
+
+@router.delete("/tickets/{ticket_id}", tags=["Tickets"])
+async def cancel_ticket(ticket_id: str, db: AsyncSession = Depends(get_db)):
+    """Отмена регистрации"""
+    client = EventsProviderClient()
+    try:
+        service = TicketService(db, client)
+        success = await service.cancel_ticket(ticket_id)
+        return {"success": success}
+    finally:
+        await client.close()
