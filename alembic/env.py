@@ -21,8 +21,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Берем URL базы данных из наших настроек (.env)
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
-
+config.set_main_option("sqlalchemy.url", settings.get_database_url())
 
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
