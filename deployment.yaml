@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: events-aggregator
+  namespace: student-andrewjtag-prog-events-aggregator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: events-aggregator
+  template:
+    metadata:
+      labels:
+        app: events-aggregator
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000  # Наш пользователь в Docker (не root)
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: app
+        image: ghcr.io/andrewjtag-prog/course-events-aggregator:latest
+        ports:
+        - containerPort: 8000
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+asyncpg://postgres:mysecretpassword@postgres:5432/events_db"
+        - name: API_KEY
+          value: rcpS5bcz6qquWjflX8s6GHd2tQych60GjRtFOf5CeUc
+        - name: BASE_URL
+          value: "https://events-provider.dev-2.python-labs.ru"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: events-aggregator
+  namespace: student-andrewjtag-prog-events-aggregator
+spec:
+  selector:
+    app: events-aggregator
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+  
+  imagePullSecrets:
+    - name: ghcr-secret
