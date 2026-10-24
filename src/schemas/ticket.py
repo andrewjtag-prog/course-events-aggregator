@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 
+
 class TicketCreateSchema(BaseModel):
     event_id: str
     first_name: str

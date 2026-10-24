@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from src.api.routes import router as api_router
 
 app = FastAPI(title="Events Aggregator API", description="Сервис-агрегатор для Events API")

@@ -5,16 +5,12 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+# Импортируем ВСЕ модели, чтобы Alembic их увидел
 from alembic import context
 
 # Импортируем настройки и базовый класс моделей
 from src.core.config import settings
 from src.db.base import Base
-
-# Импортируем ВСЕ модели, чтобы Alembic их увидел
-import src.models.event
-import src.models.place
-import src.models.ticket
 
 # Конфигурация Alembic
 config = context.config

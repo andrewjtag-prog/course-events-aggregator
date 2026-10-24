@@ -1,17 +1,22 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from typing import Optional
 
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.clients.provider import EventsProviderClient
 from src.db.session import get_db
 from src.models.event import Event
 from src.repositories.event import EventRepository
-from src.clients.provider import EventsProviderClient
+from src.schemas.event import EventDetailSchema, PaginatedEventsSchema
+from src.schemas.ticket import (
+    SeatsResponseSchema,
+    TicketCreateSchema,
+    TicketResponseSchema,
+)
 from src.services.sync import SyncService
-from src.schemas.event import PaginatedEventsSchema, EventDetailSchema
 from src.services.ticket import TicketService
-from src.schemas.ticket import TicketCreateSchema, TicketResponseSchema, SeatsResponseSchema
 
 router = APIRouter()
 

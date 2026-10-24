@@ -1,7 +1,10 @@
-import httpx
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
+
+import httpx
+
 from src.core.config import settings
+
 
 class EventsProviderClient:
     def __init__(self, base_url: str = settings.BASE_URL, api_key: str = settings.API_KEY):
@@ -64,7 +67,7 @@ class EventsProviderClient:
         )
         response.raise_for_status()
         return response.json().get("success", False)
-    from urllib.parse import urlparse, parse_qs
+    from urllib.parse import parse_qs, urlparse
 
 class EventsPaginator:
     def __init__(self, client: EventsProviderClient, changed_at: str):

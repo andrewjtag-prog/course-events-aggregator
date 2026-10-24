@@ -1,9 +1,10 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.clients.provider import EventsProviderClient, EventsPaginator
+
+from src.clients.provider import EventsPaginator, EventsProviderClient
 from src.repositories.event import EventRepository, PlaceRepository
-from src.models.place import Place
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, patch
-from httpx import Response, Request
-from src.clients.provider import EventsProviderClient, EventsPaginator
+
+import pytest
+from httpx import Request, Response
+
+from src.clients.provider import EventsPaginator, EventsProviderClient
+
 
 @pytest.fixture
 def client():

@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.clients.provider import EventsProviderClient
 from src.repositories.event import EventRepository
 from src.repositories.ticket import TicketRepository
