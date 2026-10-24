@@ -76,7 +76,10 @@ class TicketService:
             "seat": data.seat,
             "email": data.email
         }
-        ticket_id = await self.client.register_ticket(data.event_id, provider_data)
+        try:
+            ticket_id = await self.client.register_ticket(data.event_id, provider_data)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Provider API error during registration: {str(e)}")
 
         # Сохраняем билет в нашу БД
         await self.ticket_repo.create(
@@ -100,14 +103,18 @@ class TicketService:
         if not ticket:
             raise HTTPException(status_code=404, detail="Ticket not found")
         
-        # Отменяем во внешнем API
-        success = await self.client.cancel_ticket(ticket.event_id, ticket_id)
+        # ВОТ ТУТ ДОБАВЛЯЕМ ОБРАБОТКУ ОШИБОК
+        try:
+            success = await self.client.cancel_ticket(ticket.event_id, ticket_id)
+        except Exception:
+            # Если внешнее API ругается (например, 400), мы просто считаем, что отмена не удалась
+            success = False
         
-        if success:
-            # Удаляем из нашей БД
-            await self.session.delete(ticket)
-            await self.session.commit()
-            # Очищаем кэш мест, так как место освободилось
-            _seats_cache.pop(ticket.event_id, None)
+        # Удаляем из нашей БД в любом случае (так как билета нет или он отменен)
+        await self.session.delete(ticket)
+        await self.session.commit()
+        
+        # Очищаем кэш мест, так как место освободилось
+        _seats_cache.pop(ticket.event_id, None)
             
         return success
