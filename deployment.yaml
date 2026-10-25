@@ -13,8 +13,7 @@ spec:
       labels:
         app: events-aggregator
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
+  
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -35,7 +34,7 @@ spec:
         - name: API_KEY
           value: "rcpS5bcz6qquWjflX8s6GHd2tQych60GjRtFOf5CeUc"
         - name: BASE_URL
-          value: "https://events-provider.dev-2.python-labs.ru"
+          value: "http://student-system-events-provider-web.student-system-events-provider.svc:8000"
 ---
 apiVersion: v1
 kind: Service
