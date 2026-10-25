@@ -2,13 +2,12 @@
 set -e
 
 echo "Waiting for postgres..."
-sleep 3
+sleep 5
 
-# Указываем uv использовать временную папку для кэша
 export UV_CACHE_DIR=/tmp/.uv-cache
 
 echo "Running migrations..."
-uv run alembic upgrade head
+uv run --no-sync alembic upgrade head
 
 echo "Starting server..."
-exec uv run uvicorn src.main:app --host 0.0.0.0 --port 8000
+exec uv run --no-sync uvicorn src.main:app --host 0.0.0.0 --port 8000
