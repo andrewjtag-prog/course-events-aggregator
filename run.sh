@@ -4,6 +4,9 @@ set -e
 echo "Waiting for postgres..."
 sleep 3
 
+# Указываем uv использовать временную папку для кэша
+export UV_CACHE_DIR=/tmp/.uv-cache
+
 echo "Running migrations..."
 uv run alembic upgrade head
 

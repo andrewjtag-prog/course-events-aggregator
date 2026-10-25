@@ -17,7 +17,11 @@ COPY run.sh .
 # Делаем скрипт исполняемым
 RUN chmod +x run.sh
 
-# Устанавливаем зависимости (без dev-пакетов)
+# Создаем пользователя и даем ему права на папку /app
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Устанавливаем зависимости от имени нового пользователя
 RUN uv sync --frozen --no-dev
 
 EXPOSE 8000
