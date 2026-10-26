@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 
 from src.core.config import settings
+from src.exceptions import ProviderAPIError
 
 
 class EventsProviderClient:
@@ -42,7 +43,7 @@ class EventsProviderClient:
             return data.get("seats", [])
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 500:
-                raise Exception("Внешнее API вернуло ошибку. Возможно, событие не опубликовано или мест нет.")
+                raise ProviderAPIError("Внешнее API вернуло ошибку. Возможно, событие не опубликовано или мест нет.")
             raise e
 
     async def register_ticket(self, event_id: str, data: dict) -> str:
