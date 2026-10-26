@@ -12,10 +12,10 @@ from src.db.session import async_session_maker
 from src.exceptions import (
     EventNotFound,
     EventNotPublished,
+    ProviderAPIError,
     RegistrationDeadlinePassed,
     SeatNotAvailable,
     TicketNotFound,
-    ProviderAPIError,
 )
 from src.services.sync import SyncService
 
