@@ -30,14 +30,14 @@ async def periodic_sync():
                 client = EventsProviderClient()
                 try:
                     service = SyncService(session, client)
-                    await service.sync_events()
+                    # Передаем None, чтобы сервис сам взял last_changed_at из БД
+                    await service.sync_events(changed_at=None) 
                 finally:
                     await client.close()
             logger.info("Periodic sync finished.")
         except Exception as e:
-            logger.error(f"Error in periodic sync: {e}")
+            logger.error("Error in periodic sync: %s", e)
         
-        # Ждем 24 часа (86400 секунд)
         await asyncio.sleep(86400)
 
 @asynccontextmanager
