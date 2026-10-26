@@ -59,14 +59,18 @@ class SyncService:
                     await self._process_event(event_data)
                     processed_count += 1
                     
+                    # Берем changed_at из события и оставляем только дату (YYYY-MM-DD)
                     event_changed = event_data.get("changed_at", changed_at)
-                    if event_changed > max_changed_at:
-                        max_changed_at = event_changed
+                    if event_changed:
+                        # Преобразуем ISO строку в дату
+                        event_date = event_changed.split("T")[0]
+                        if event_date > max_changed_at.split("T")[0]:
+                            max_changed_at = event_date
                 
                 await self.session.commit()
                 
-            # Сохраняем новую дату синхронизации
-            await self.save_last_changed_at(max_changed_at)
+            # Сохраняем новую дату синхронизации (в формате YYYY-MM-DD)
+            await self.save_last_changed_at(max_changed_at.split("T")[0])
                 
             logger.info("Sync finished. Processed %s events.", processed_count)
             return processed_count
