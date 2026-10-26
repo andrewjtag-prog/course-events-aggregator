@@ -1,3 +1,4 @@
+import enum
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
@@ -6,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base
 from src.models.place import Place
 
-import enum
 
 class EventStatus(str, enum.Enum):
     NEW = "new"
