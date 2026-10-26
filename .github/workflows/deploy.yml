@@ -16,6 +16,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # НОВЫЙ ШАГ: Линтер (гейт перед деплоем)
+      - name: Run Ruff Linter
+        run: |
+          pip install ruff
+          ruff check .
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -27,7 +33,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }} # Используем твой PAT, чтобы точно работало
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Set lowercase repository name
         id: repo
