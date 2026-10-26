@@ -54,8 +54,7 @@ class SyncService:
         # Проверяем, есть ли уже такое событие в БД
         existing_event = await self.event_repo.get_by_id(event_data["id"])
 
-        # Парсим строковые даты из ISO формата в объекты datetime
-        # Заменяем 'Z' на '+00:00' для корректного парсинга в Python 3.10 и ниже
+        # Заменяем 'Z' на '+00:00' 
         event_time = datetime.fromisoformat(event_data["event_time"].replace("Z", "+00:00"))
         reg_deadline = datetime.fromisoformat(event_data["registration_deadline"].replace("Z", "+00:00"))
         changed_at = datetime.fromisoformat(event_data["changed_at"].replace("Z", "+00:00"))
@@ -67,7 +66,7 @@ class SyncService:
             await self.event_repo.update(
                 existing_event,
                 name=event_data["name"],
-                place_id=place_id, # <--- ИСПРАВЛЕНО ЗДЕСЬ
+                place_id=place_id, 
                 event_time=event_time,
                 registration_deadline=reg_deadline,
                 status=event_data["status"],
@@ -80,7 +79,7 @@ class SyncService:
             await self.event_repo.create(
                 id=event_data["id"],
                 name=event_data["name"],
-                place_id=place_id, # <--- ИСПРАВЛЕНО ЗДЕСЬ
+                place_id=place_id, 
                 event_time=event_time,
                 registration_deadline=reg_deadline,
                 status=event_data["status"],

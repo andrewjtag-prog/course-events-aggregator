@@ -1,12 +1,10 @@
-from typing import Optional
-
-from sqlalchemy import select
+from datetime import datetime
+from typing import Optional, Tuple, List
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.models.event import Event
 from src.models.place import Place
 from src.repositories.base import BaseRepository
-
 
 class EventRepository(BaseRepository[Event]):
     def __init__(self, session: AsyncSession):
@@ -18,7 +16,32 @@ class EventRepository(BaseRepository[Event]):
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_paginated_events(
+        self, 
+        date_from: Optional[datetime] = None, 
+        page: int = 1, 
+        page_size: int = 20
+    ) -> Tuple[List[Event], int]:
+        """Получает список событий с фильтрацией и пагинацией"""
+        query = select(Event)
+        
+        if date_from:
+            query = query.where(Event.event_time >= date_from)
+
+        # Считаем общее количество
+        count_query = select(func.count()).select_from(query.subquery())
+        total_count = (await self.session.execute(count_query)).scalar()
+
+        # Пагинация
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size).order_by(Event.event_time)
+        
+        result = await self.session.execute(query)
+        events = result.scalars().all()
+
+        return list(events), total_count
+
+
 class PlaceRepository(BaseRepository[Place]):
     def __init__(self, session: AsyncSession):
         super().__init__(Place, session)
-        

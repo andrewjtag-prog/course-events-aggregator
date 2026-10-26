@@ -6,6 +6,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base
 from src.models.place import Place
 
+import enum
+
+class EventStatus(str, enum.Enum):
+    NEW = "new"
+    PUBLISHED = "published"
+    FINISHED = "finished"
+    REGISTRATION_CLOSED = "registration_closed"
+
 
 class Event(Base):
     __tablename__ = "events"
@@ -15,7 +23,7 @@ class Event(Base):
     place_id: Mapped[str] = mapped_column(ForeignKey("places.id"))
     event_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     registration_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    status: Mapped[str] = mapped_column(String)
+    status: Mapped[EventStatus] = mapped_column(String) #изминения типа колонки status: Mapped[EventStatus] = mapped_column(String)
     number_of_visitors: Mapped[int] = mapped_column(Integer, default=0)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

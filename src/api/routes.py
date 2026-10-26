@@ -1,13 +1,11 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.clients.provider import EventsProviderClient
 from src.db.session import get_db
-from src.models.event import Event
 from src.repositories.event import EventRepository
 from src.schemas.event import EventDetailSchema, PaginatedEventsSchema
 from src.schemas.ticket import (
@@ -44,36 +42,30 @@ async def trigger_sync(
 
 @router.get("/events", response_model=PaginatedEventsSchema, tags=["Events"])
 async def get_events(
+    request: Request,
     date_from: Optional[str] = Query(None, description="Фильтр по дате (YYYY-MM-DD)"),
     page: int = Query(1, ge=1, description="Номер страницы"),
     page_size: int = Query(20, ge=1, le=100, description="Размер страницы"),
     db: AsyncSession = Depends(get_db)
 ):
-    query = select(Event)
-    
+    parsed_date = None
     if date_from:
         try:
-            # Преобразуем строку в datetime и добавляем таймзону UTC
             parsed_date = datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            query = query.where(Event.event_time >= parsed_date)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-    # ... дальше идет подсчет count и пагинация ...
 
-    # Считаем общее количество для пагинации
-    count_query = select(func.count()).select_from(query.subquery())
-    total_count = (await db.execute(count_query)).scalar()
+    repo = EventRepository(db)
+    events, total_count = await repo.get_paginated_events(
+        date_from=parsed_date, 
+        page=page, 
+        page_size=page_size
+    )
 
-    # Применяем пагинацию
-    offset = (page - 1) * page_size
-    query = query.offset(offset).limit(page_size).order_by(Event.event_time)
-    
-    result = await db.execute(query)
-    events = result.scalars().all()
-
-    # Формируем ссылки для пагинации (опционально, но по заданию нужно)
-    next_page = f"http://127.0.0.1:8000/api/events?page={page+1}&page_size={page_size}" if offset + page_size < total_count else None
-    prev_page = f"http://127.0.0.1:8000/api/events?page={page-1}&page_size={page_size}" if page > 1 else None
+    # Формируем ссылки на основе реального URL запроса
+    base_url = str(request.url.include_query_params(page=page+1)).split("&page=")[0]
+    next_page = f"{base_url}&page={page+1}" if (page - 1) * page_size + page_size < total_count else None
+    prev_page = f"{base_url}&page={page-1}" if page > 1 else None
 
     return {
         "count": total_count,
@@ -96,6 +88,7 @@ async def get_event_detail(event_id: str, db: AsyncSession = Depends(get_db)):
         
     return event
 
+
 @router.get("/events/{event_id}/seats", response_model=SeatsResponseSchema, tags=["Events"])
 async def get_seats(event_id: str, db: AsyncSession = Depends(get_db)):
     """Получить свободные места (кэш 30 сек)"""
@@ -107,6 +100,7 @@ async def get_seats(event_id: str, db: AsyncSession = Depends(get_db)):
     finally:
         await client.close()
 
+
 @router.post("/tickets", response_model=TicketResponseSchema, status_code=201, tags=["Tickets"])
 async def create_ticket(data: TicketCreateSchema, db: AsyncSession = Depends(get_db)):
     """Регистрация на событие"""
@@ -117,6 +111,7 @@ async def create_ticket(data: TicketCreateSchema, db: AsyncSession = Depends(get
         return {"ticket_id": ticket_id}
     finally:
         await client.close()
+
 
 @router.delete("/tickets/{ticket_id}", tags=["Tickets"])
 async def cancel_ticket(ticket_id: str, db: AsyncSession = Depends(get_db)):

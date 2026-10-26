@@ -13,7 +13,7 @@ class EventsProviderClient:
         self.client = httpx.AsyncClient(
             base_url=self.base_url, 
             headers=self.headers, 
-            timeout=30.0, # Увеличим таймаут на всякий случай
+            timeout=30.0,
             follow_redirects=True 
         )
 
@@ -29,12 +29,8 @@ class EventsProviderClient:
         if cursor:
             params["cursor"] = cursor
 
-        # Делаем GET запрос к внешнему API
         response = await self.client.get("/api/events/", params=params)
-        
-        # Если ошибка (4xx, 5xx) - выбрасываем исключение
         response.raise_for_status()
-        
         return response.json()
 
     async def get_available_seats(self, event_id: str) -> List[str]:
@@ -45,7 +41,6 @@ class EventsProviderClient:
             data = response.json()
             return data.get("seats", [])
         except httpx.HTTPStatusError as e:
-            # Если внешнее API вернуло 500 (например, событие не опубликовано там)
             if e.response.status_code == 500:
                 raise Exception("Внешнее API вернуло ошибку. Возможно, событие не опубликовано или мест нет.")
             raise e
@@ -59,7 +54,6 @@ class EventsProviderClient:
 
     async def cancel_ticket(self, event_id: str, ticket_id: str) -> bool:
         """Отменяет регистрацию."""
-        # Внешнее API ожидает ticket_id в теле DELETE запроса
         response = await self.client.request(
             method="DELETE", 
             url=f"/api/events/{event_id}/unregister/", 
@@ -67,7 +61,7 @@ class EventsProviderClient:
         )
         response.raise_for_status()
         return response.json().get("success", False)
-    from urllib.parse import parse_qs, urlparse
+
 
 class EventsPaginator:
     def __init__(self, client: EventsProviderClient, changed_at: str):
@@ -75,29 +69,20 @@ class EventsPaginator:
         self.changed_at = changed_at
 
     async def __aiter__(self):
-        """
-        Асинхронный итератор, который будет по очереди отдавать страницы с событиями.
-        """
+        """Асинхронный итератор, который отдает страницы с событиями."""
         cursor = None
         while True:
-            # Запрашиваем страницу
             page_data = await self.client.get_events_page(
                 changed_at=self.changed_at, 
                 cursor=cursor
             )
             
-            # Отдаем результаты (список событий) наружу
             yield page_data.get("results", [])
             
-            # Берем URL следующей страницы из поля "next"
             next_url = page_data.get("next")
-            
             if not next_url:
-                # Если next равен null, значит это была последняя страница
                 break
                 
-            # Внешнее API возвращает полный URL в поле next
-            # Нам нужно вытащить из него только параметр cursor для следующего запроса
             parsed_url = urlparse(next_url)
             query_params = parse_qs(parsed_url.query)
             
