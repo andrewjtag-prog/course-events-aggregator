@@ -6,10 +6,10 @@ from src.clients.provider import EventsProviderClient
 from src.exceptions import (
     EventNotFound,
     EventNotPublished,
+    ProviderAPIError,
     RegistrationDeadlinePassed,
     SeatNotAvailable,
     TicketNotFound,
-    ProviderAPIError,
 )
 from src.models.event import EventStatus
 from src.repositories.event import EventRepository

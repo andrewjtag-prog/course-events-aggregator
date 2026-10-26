@@ -6,10 +6,10 @@ from src.api.routes import router as api_router
 from src.exceptions import (
     EventNotFound,
     EventNotPublished,
+    ProviderAPIError,
     RegistrationDeadlinePassed,
     SeatNotAvailable,
     TicketNotFound,
-    ProviderAPIError,
 )
 
 app = FastAPI(title="Events Aggregator API", description="Сервис-агрегатор для Events API")
