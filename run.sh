@@ -7,14 +7,14 @@ sleep 5
 export UV_CACHE_DIR=/tmp/.uv-cache
 
 echo "Running migrations..."
-# Пытаемся применить миграции до 5 раз, если база еще не готова
-for i in {1..5}; do
+# Пытаемся применить миграции, пока не получится (или пока не истекут 10 попыток)
+for i in {1..10}; do
     if uv run --no-sync alembic upgrade head; then
         echo "Migrations applied successfully!"
         break
     else
-        echo "Migration failed, retrying in 5 seconds..."
-        sleep 5
+        echo "Migration failed, retrying in 3 seconds..."
+        sleep 3
     fi
 done
 
