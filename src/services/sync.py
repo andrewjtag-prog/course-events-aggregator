@@ -40,7 +40,7 @@ class SyncService:
         meta.sync_status = "success"
         await self.session.commit()
 
-    async def sync_events(self, changed_at: str = None) -> int:
+    async def sync_events(self, changed_at: str | None = None) -> int:
         """
         Синхронизирует события с внешним API.
         Если changed_at не передан — использует дату последней синхронизации.

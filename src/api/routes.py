@@ -4,7 +4,6 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.clients.provider import EventsProviderClient
 from src.db.session import get_db
 from src.repositories.event import EventRepository
 from src.schemas.event import EventDetailSchema, PaginatedEventsSchema
@@ -18,21 +17,24 @@ from src.services.ticket import TicketService
 
 router = APIRouter()
 
+
 # --- Эндпоинты для Синхронизации ---
 
 @router.post("/sync/trigger", tags=["Sync"], status_code=200)
 async def trigger_sync(
+    request: Request,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """
     Запускает синхронизацию вручную.
+    Использует инкрементальную синхронизацию (берет last_changed_at из БД).
     """
     async def run_sync():
-        client = EventsProviderClient()
+        client = request.app.state.client
         service = SyncService(db, client)
-        await service.sync_events(changed_at="2000-01-01")
-        await client.close()
+        # changed_at=None — сервис сам возьмет last_changed_at из SyncMetadata
+        await service.sync_events(changed_at=None)
 
     background_tasks.add_task(run_sync)
     return {"status": "ok", "message": "Sync started in background"}
@@ -63,9 +65,10 @@ async def get_events(
     )
 
     # Формируем ссылки на основе реального URL запроса
-    base_url = str(request.url.include_query_params(page=page+1)).split("&page=")[0]
-    next_page = f"{base_url}&page={page+1}" if (page - 1) * page_size + page_size < total_count else None
-    prev_page = f"{base_url}&page={page-1}" if page > 1 else None
+    base_url = request.url.remove_query_params("page")
+    
+    next_page = str(base_url.include_query_params(page=page+1)) if (page - 1) * page_size + page_size < total_count else None
+    prev_page = str(base_url.include_query_params(page=page-1)) if page > 1 else None
 
     return {
         "count": total_count,
@@ -90,36 +93,24 @@ async def get_event_detail(event_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/events/{event_id}/seats", response_model=SeatsResponseSchema, tags=["Events"])
-async def get_seats(event_id: str, db: AsyncSession = Depends(get_db)):
+async def get_seats(event_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     """Получить свободные места (кэш 30 сек)"""
-    client = EventsProviderClient()
-    try:
-        service = TicketService(db, client)
-        seats = await service.get_available_seats(event_id)
-        return {"event_id": event_id, "available_seats": seats}
-    finally:
-        await client.close()
+    service = TicketService(db, request.app.state.client)
+    seats = await service.get_available_seats(event_id)
+    return {"event_id": event_id, "available_seats": seats}
 
 
 @router.post("/tickets", response_model=TicketResponseSchema, status_code=201, tags=["Tickets"])
-async def create_ticket(data: TicketCreateSchema, db: AsyncSession = Depends(get_db)):
+async def create_ticket(data: TicketCreateSchema, request: Request, db: AsyncSession = Depends(get_db)):
     """Регистрация на событие"""
-    client = EventsProviderClient()
-    try:
-        service = TicketService(db, client)
-        ticket_id = await service.register_ticket(data)
-        return {"ticket_id": ticket_id}
-    finally:
-        await client.close()
+    service = TicketService(db, request.app.state.client)
+    ticket_id = await service.register_ticket(data)
+    return {"ticket_id": ticket_id}
 
 
 @router.delete("/tickets/{ticket_id}", tags=["Tickets"])
-async def cancel_ticket(ticket_id: str, db: AsyncSession = Depends(get_db)):
+async def cancel_ticket(ticket_id: str, request: Request, db: AsyncSession = Depends(get_db)):
     """Отмена регистрации"""
-    client = EventsProviderClient()
-    try:
-        service = TicketService(db, client)
-        success = await service.cancel_ticket(ticket_id)
-        return {"success": success}
-    finally:
-        await client.close()
+    service = TicketService(db, request.app.state.client)
+    success = await service.cancel_ticket(ticket_id)
+    return {"success": success}

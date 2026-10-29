@@ -21,6 +21,7 @@ from src.services.sync import SyncService
 
 logger = logging.getLogger(__name__)
 
+
 async def periodic_sync():
     """Фоновая задача: синхронизация раз в 24 часа"""
     while True:
@@ -30,8 +31,7 @@ async def periodic_sync():
                 client = EventsProviderClient()
                 try:
                     service = SyncService(session, client)
-                    # Передаем None, чтобы сервис сам взял last_changed_at из БД
-                    await service.sync_events(changed_at=None) 
+                    await service.sync_events(changed_at=None)
                 finally:
                     await client.close()
             logger.info("Periodic sync finished.")
@@ -40,19 +40,28 @@ async def periodic_sync():
         
         await asyncio.sleep(86400)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Запускаем фоновую задачу при старте приложения
+    # Создаем один экземпляр клиента на все приложение
+    app.state.client = EventsProviderClient()
+    
+    # Запускаем фоновую задачу
     task = asyncio.create_task(periodic_sync())
+    
     yield
-    # Отменяем задачу при остановке
+    
+    # Останавливаем задачу и закрываем клиент
     task.cancel()
+    await app.state.client.close()
+
 
 app = FastAPI(
     title="Events Aggregator API", 
     description="Сервис-агрегатор для Events API",
     lifespan=lifespan
 )
+
 
 # --- Обработчики ошибок ---
 
@@ -84,9 +93,11 @@ async def seat_not_available_handler(request: Request, exc: SeatNotAvailable):
 async def provider_error_handler(request: Request, exc: ProviderAPIError):
     return JSONResponse(status_code=400, content={"detail": f"Provider API error: {str(exc)}"})
 
+
 # --- Роутеры ---
 
 app.include_router(api_router, prefix="/api")
+
 
 @app.get("/api/health", tags=["Health"])
 async def health_check():
